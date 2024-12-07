@@ -84,7 +84,6 @@ public class Boss extends FighterPlane {
     public void takeDamage() {
         // if (!isShielded) {
             super.takeDamage();
-            System.out.println("Boss health: " + getHealth());
         // }
     }
 
