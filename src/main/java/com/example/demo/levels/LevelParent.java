@@ -1,7 +1,11 @@
-package com.example.demo;
+package com.example.demo.levels;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import com.example.demo.actors.ActiveActorDestructible;
+import com.example.demo.actors.FighterPlane;
+import com.example.demo.utils.GameState;
 
 import javafx.animation.*;
 import javafx.event.EventHandler;
@@ -178,7 +182,7 @@ public abstract class LevelParent extends Observable {
 		}
 	}
 
-	private void updateActors() {
+	public void updateActors() {
 		friendlyUnits.forEach(plane -> plane.updateActor());
 		enemyUnits.forEach(enemy -> enemy.updateActor());
 		userProjectiles.forEach(projectile -> projectile.updateActor());

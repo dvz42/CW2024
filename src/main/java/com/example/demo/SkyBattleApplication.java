@@ -1,11 +1,13 @@
-package com.example.demo.controller;
+package com.example.demo;
 
 import java.lang.reflect.InvocationTargetException;
+
+import com.example.demo.controller.Controller;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
 
-public class Main extends Application {
+public class SkyBattleApplication extends Application {
 
 	private static final int SCREEN_WIDTH = 1300;
 	private static final int SCREEN_HEIGHT = 750;

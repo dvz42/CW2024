@@ -1,13 +1,20 @@
-package com.example.demo;
+package com.example.demo.levels;
 
-public class LevelTwo extends LevelParent {
+import com.example.demo.actors.ActiveActorDestructible;
+import com.example.demo.actors.EnemyPlane;
+import com.example.demo.utils.GameState;
 
-    private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background2.png";
+public class LevelThree extends LevelParent {
+
+    private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background3.png";
     private static final int PLAYER_INITIAL_HEALTH = 50;
-    private static final int TOTAL_ENEMIES = 10;
-    private static final double ENEMY_SPAWN_PROBABILITY = .25;
-    private static final int KILLS_TO_ADVANCE = 10;
-    public LevelTwo(double screenHeight, double screenWidth) {
+    private static final int TOTAL_ENEMIES = 5;
+    private static final double ENEMY_SPAWN_PROBABILITY = .15;
+    private static final int KILLS_TO_ADVANCE = 15;
+    private static final String ENEMY_IMAGE = "enemyPlane3.png";
+    private static final double ENEMY_FIRE_RATE = .08;
+
+    public LevelThree(double screenHeight, double screenWidth) {
         super(BACKGROUND_IMAGE_NAME, screenHeight, screenWidth, PLAYER_INITIAL_HEALTH);
     }
 
@@ -18,11 +25,10 @@ public class LevelTwo extends LevelParent {
 
     @Override
     protected void checkIfGameOver() {
-        // System.out.println("Kill target: " + KILLS_TO_ADVANCE + " Current kills: " + getUser().getNumberOfKills());
         if (userIsDestroyed()) {
             loseGame();
         } else if (userHasReachedKillTarget()) {
-            goToNextLevel(GameState.LEVEL_THREE);
+            goToNextLevel(GameState.LEVEL_FOUR);
         }
     }
 
@@ -32,8 +38,11 @@ public class LevelTwo extends LevelParent {
         for (int i = 0; i < TOTAL_ENEMIES - currentNumberOfEnemies; i++) {
             if (Math.random() < ENEMY_SPAWN_PROBABILITY) {
                 double newEnemyInitialYPosition = Math.random() * getEnemyMaximumYPosition();
-                ActiveActorDestructible newEnemy = new EnemyPlane(getScreenWidth(), newEnemyInitialYPosition);
+                ActiveActorDestructible newEnemy = new EnemyPlane(getScreenWidth(), newEnemyInitialYPosition,
+                        ENEMY_IMAGE, ENEMY_FIRE_RATE);
                 addEnemyUnit(newEnemy);
+            } else {
+                Thread.yield();
             }
         }
     }

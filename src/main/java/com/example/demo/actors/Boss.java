@@ -1,6 +1,8 @@
-package com.example.demo;
+package com.example.demo.actors;
 
 import java.util.*;
+
+import com.example.demo.projectiles.BossProjectile;
 
 public class Boss extends FighterPlane {
 

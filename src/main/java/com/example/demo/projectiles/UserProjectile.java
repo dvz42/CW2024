@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.projectiles;
 
 public class UserProjectile extends Projectile {
 
@@ -14,10 +14,10 @@ public class UserProjectile extends Projectile {
 	public void updatePosition() {
 		moveHorizontally(HORIZONTAL_VELOCITY);
 	}
-	
+
 	@Override
 	public void updateActor() {
 		updatePosition();
 	}
-	
+
 }

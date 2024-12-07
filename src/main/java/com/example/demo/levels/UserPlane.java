@@ -1,4 +1,8 @@
-package com.example.demo;
+package com.example.demo.levels;
+
+import com.example.demo.actors.ActiveActorDestructible;
+import com.example.demo.actors.FighterPlane;
+import com.example.demo.projectiles.UserProjectile;
 
 public class UserPlane extends FighterPlane {
 
@@ -49,7 +53,9 @@ public class UserPlane extends FighterPlane {
 
     @Override
     public ActiveActorDestructible fireProjectile() {
-        return new UserProjectile(PROJECTILE_X_POSITION, getProjectileYPosition(PROJECTILE_Y_POSITION_OFFSET));
+        double projectileXPosition = getLayoutX() + getTranslateX() + PROJECTILE_X_POSITION;
+        double projectileYPosition = getProjectileYPosition(PROJECTILE_Y_POSITION_OFFSET);
+        return new UserProjectile(projectileXPosition, projectileYPosition);
     }
 
     private boolean isMoving() {
