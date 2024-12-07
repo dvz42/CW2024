@@ -7,6 +7,7 @@ import javafx.animation.*;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.image.*;
 import javafx.scene.input.*;
 import javafx.util.Duration;
@@ -29,7 +30,9 @@ public abstract class LevelParent extends Observable {
 	private final List<ActiveActorDestructible> enemyUnits;
 	private final List<ActiveActorDestructible> userProjectiles;
 	private final List<ActiveActorDestructible> enemyProjectiles;
-	
+
+	private GameState currentState;
+
 	private int currentNumberOfEnemies;
 	private LevelView levelView;
 
@@ -51,6 +54,7 @@ public abstract class LevelParent extends Observable {
 		this.currentNumberOfEnemies = 0;
 		initializeTimeline();
 		friendlyUnits.add(user);
+		this.currentState = GameState.LEVEL_ONE;
 	}
 
 	protected abstract void initializeFriendlyUnits();
@@ -73,24 +77,46 @@ public abstract class LevelParent extends Observable {
 		timeline.play();
 	}
 
-	public void goToNextLevel(String levelName) {
+	public void goToNextLevel(GameState nextState) {
+		if (currentState == nextState) {
+			return;
+		}
+		System.out.println("Going to next level: " + nextState);
 		setChanged();
-		notifyObservers(levelName);
+		notifyObservers(nextState);
+		currentState = nextState;
+	}
+
+	public void stopGame() {
+		timeline.stop();
 	}
 
 	private void updateScene() {
-		spawnEnemyUnits();
-		updateActors();
-		generateEnemyFire();
-		updateNumberOfEnemies();
-		handleEnemyPenetration();
-		handleUserProjectileCollisions();
-		handleEnemyProjectileCollisions();
-		handlePlaneCollisions();
-		removeAllDestroyedActors();
-		updateKillCount();
-		updateLevelView();
-		checkIfGameOver();
+		try {
+			spawnEnemyUnits();
+			updateActors();
+			generateEnemyFire();
+			updateNumberOfEnemies();
+			handleEnemyPenetration();
+			handleUserProjectileCollisions();
+			handleEnemyProjectileCollisions();
+			handlePlaneCollisions();
+			removeAllDestroyedActors();
+			updateLevelView();
+			checkIfGameOver();
+		} catch (Exception e) {
+			System.out.println("Error in updateScene method");
+			System.out.println(e.getClass().toString() + ": " + e.getMessage());
+			e.printStackTrace();
+			stopGame();
+			showErrorAlert(e);
+		}
+	}
+
+	private void showErrorAlert(Exception e) {
+		Alert alert = new Alert(Alert.AlertType.ERROR);
+		alert.setContentText(e.getClass().toString() + ": " + e.getMessage());
+		alert.show();
 	}
 
 	private void initializeTimeline() {
@@ -106,24 +132,39 @@ public abstract class LevelParent extends Observable {
 		background.setOnKeyPressed(new EventHandler<KeyEvent>() {
 			public void handle(KeyEvent e) {
 				KeyCode kc = e.getCode();
-				if (kc == KeyCode.UP) user.moveUp();
-				if (kc == KeyCode.DOWN) user.moveDown();
-				if (kc == KeyCode.SPACE) fireProjectile();
+				if (kc == KeyCode.UP || kc == KeyCode.W)
+					user.moveUp();
+				if (kc == KeyCode.DOWN || kc == KeyCode.S)
+					user.moveDown();
+				if (kc == KeyCode.LEFT || kc == KeyCode.A)
+					user.moveLeft();
+				if (kc == KeyCode.RIGHT || kc == KeyCode.D)
+					user.moveRight();
+				if (kc == KeyCode.SPACE)
+					fireProjectile();
 			}
 		});
 		background.setOnKeyReleased(new EventHandler<KeyEvent>() {
 			public void handle(KeyEvent e) {
 				KeyCode kc = e.getCode();
-				if (kc == KeyCode.UP || kc == KeyCode.DOWN) user.stop();
+				if (kc == KeyCode.UP || kc == KeyCode.DOWN || kc == KeyCode.W || kc == KeyCode.S)
+					user.stopVertical();
+				else if (kc == KeyCode.LEFT || kc == KeyCode.RIGHT || kc == KeyCode.A || kc == KeyCode.D)
+					user.stopHorizontal();
 			}
 		});
 		root.getChildren().add(background);
 	}
 
+	private static final int MAX_PROJECTILES = 10;
+
 	private void fireProjectile() {
-		ActiveActorDestructible projectile = user.fireProjectile();
-		root.getChildren().add(projectile);
-		userProjectiles.add(projectile);
+		if (userProjectiles.size() < MAX_PROJECTILES) {
+
+			ActiveActorDestructible projectile = user.fireProjectile();
+			root.getChildren().add(projectile);
+			userProjectiles.add(projectile);
+		}
 	}
 
 	private void generateEnemyFire() {
@@ -147,7 +188,7 @@ public abstract class LevelParent extends Observable {
 	private void removeAllDestroyedActors() {
 		removeDestroyedActors(friendlyUnits);
 		removeDestroyedActors(enemyUnits);
-		removeDestroyedActors(userProjectiles);
+		removeDestroyedBullets(userProjectiles);
 		removeDestroyedActors(enemyProjectiles);
 	}
 
@@ -158,12 +199,37 @@ public abstract class LevelParent extends Observable {
 		actors.removeAll(destroyedActors);
 	}
 
+	private void removeDestroyedBullets(List<ActiveActorDestructible> actors) {
+		List<ActiveActorDestructible> destroyedActors = actors.stream()
+				.filter(actor -> actor.isDestroyed() || isOutOfBounds(actor))
+				.collect(Collectors.toList());
+		root.getChildren().removeAll(destroyedActors);
+		actors.removeAll(destroyedActors);
+	}
+
+	private boolean isOutOfBounds(ActiveActorDestructible actor) {
+		double x = actor.getTranslateX();
+		double y = actor.getTranslateY();
+		return x < 0 || x > screenWidth || y < 0 || y > screenHeight;
+	}
+
 	private void handlePlaneCollisions() {
 		handleCollisions(friendlyUnits, enemyUnits);
 	}
 
 	private void handleUserProjectileCollisions() {
-		handleCollisions(userProjectiles, enemyUnits);
+		for (ActiveActorDestructible projectile : userProjectiles) {
+			for (ActiveActorDestructible enemy : enemyUnits) {
+				if (projectile.getBoundsInParent().intersects(enemy.getBoundsInParent())) {
+					enemy.takeDamage();
+					projectile.takeDamage();
+					if (enemy.isDestroyed()) {
+						System.out.println("Enemy destroyed");
+						user.incrementKillCount();
+					}
+				}
+			}
+		}
 	}
 
 	private void handleEnemyProjectileCollisions() {
@@ -193,12 +259,6 @@ public abstract class LevelParent extends Observable {
 
 	private void updateLevelView() {
 		levelView.removeHearts(user.getHealth());
-	}
-
-	private void updateKillCount() {
-		for (int i = 0; i < currentNumberOfEnemies - enemyUnits.size(); i++) {
-			user.incrementKillCount();
-		}
 	}
 
 	private boolean enemyHasPenetratedDefenses(ActiveActorDestructible enemy) {
