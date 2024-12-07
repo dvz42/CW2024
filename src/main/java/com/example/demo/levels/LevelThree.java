@@ -12,7 +12,7 @@ public class LevelThree extends LevelParent {
     private static final double ENEMY_SPAWN_PROBABILITY = .15;
     private static final int KILLS_TO_ADVANCE = 15;
     private static final String ENEMY_IMAGE = "enemyPlane3.png";
-    private static final double ENEMY_FIRE_RATE = .08;
+    private static final double ENEMY_FIRE_RATE = .04;
 
     public LevelThree(double screenHeight, double screenWidth) {
         super(BACKGROUND_IMAGE_NAME, screenHeight, screenWidth, PLAYER_INITIAL_HEALTH);

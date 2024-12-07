@@ -1,7 +1,5 @@
-package com.example.demo.levels;
+package com.example.demo.actors;
 
-import com.example.demo.actors.ActiveActorDestructible;
-import com.example.demo.actors.FighterPlane;
 import com.example.demo.projectiles.UserProjectile;
 
 public class UserPlane extends FighterPlane {

@@ -14,6 +14,7 @@ public class LevelOne extends LevelParent {
 	private static final int PLAYER_INITIAL_HEALTH = 50;
 	private static final String ENEMY_IMAGE = "enemyplane.png";
 	private static final double ENEMY_FIRE_RATE = .01;
+
 	public LevelOne(double screenHeight, double screenWidth) {
 		super(BACKGROUND_IMAGE_NAME, screenHeight, screenWidth, PLAYER_INITIAL_HEALTH);
 	}
@@ -21,10 +22,8 @@ public class LevelOne extends LevelParent {
 	@Override
 	protected void checkIfGameOver() {
 		if (userIsDestroyed()) {
-			System.out.println("User is destroyed");
 			loseGame();
-		}
-		else if (userHasReachedKillTarget())
+		} else if (userHasReachedKillTarget())
 			goToNextLevel(GameState.LEVEL_TWO);
 	}
 
@@ -39,10 +38,11 @@ public class LevelOne extends LevelParent {
 		for (int i = 0; i < TOTAL_ENEMIES - currentNumberOfEnemies; i++) {
 			if (Math.random() < ENEMY_SPAWN_PROBABILITY) {
 				double newEnemyInitialYPosition = Math.random() * getEnemyMaximumYPosition();
-				ActiveActorDestructible newEnemy = new EnemyPlane(getScreenWidth(), newEnemyInitialYPosition, ENEMY_IMAGE, ENEMY_FIRE_RATE);
+				ActiveActorDestructible newEnemy = new EnemyPlane(getScreenWidth(), newEnemyInitialYPosition,
+						ENEMY_IMAGE, ENEMY_FIRE_RATE);
 				addEnemyUnit(newEnemy);
 			} else {
-					Thread.yield();
+				Thread.yield();
 
 			}
 		}

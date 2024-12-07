@@ -28,6 +28,7 @@ public class EnemyPlane extends FighterPlane {
 			double projectileYPostion = getProjectileYPosition(PROJECTILE_Y_POSITION_OFFSET);
 			return new EnemyProjectile(projectileXPosition, projectileYPostion);
 		}
+		Thread.yield();
 		return null;
 	}
 

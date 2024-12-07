@@ -1,6 +1,7 @@
 package com.example.demo.levels;
 
 import com.example.demo.views.ShieldImage;
+
 import javafx.scene.Group;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
@@ -49,6 +50,7 @@ public class LevelFourView extends LevelView {
 
 	public void updateBossHealth(int health) {
 		if (bossHealthLabel != null) {
+			System.out.println("Updating boss health");
 			bossHealthLabel.setText("Boss Health: " + health);
 		}
 	}

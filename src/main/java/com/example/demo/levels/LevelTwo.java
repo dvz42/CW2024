@@ -8,8 +8,8 @@ public class LevelTwo extends LevelParent {
 
     private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background2.png";
     private static final int PLAYER_INITIAL_HEALTH = 50;
-    private static final int TOTAL_ENEMIES = 10;
-    private static final double ENEMY_SPAWN_PROBABILITY = .1;
+    private static final int TOTAL_ENEMIES = 5;
+    private static final double ENEMY_SPAWN_PROBABILITY = .009;
     private static final int KILLS_TO_ADVANCE = 10;
     private static final String ENEMY_IMAGE = "enemyPlane2.png";
     private static final double ENEMY_FIRE_RATE = .03;

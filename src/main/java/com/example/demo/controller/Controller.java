@@ -37,7 +37,6 @@ public class Controller implements Observer {
         if (currentLevel == null) {
             throw new IllegalArgumentException("Invalid game state: " + state);
         }
-        System.out.println("Transitioning to level: " + currentLevel.getClass().getName());
 
         currentLevel.addObserver(this);
         Scene scene = currentLevel.initializeScene();

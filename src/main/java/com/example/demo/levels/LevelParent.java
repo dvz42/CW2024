@@ -1,315 +1,179 @@
 package com.example.demo.levels;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Observer;
 
 import com.example.demo.actors.ActiveActorDestructible;
-import com.example.demo.actors.FighterPlane;
+import com.example.demo.actors.UserPlane;
+import com.example.demo.managers.ActorManager;
+import com.example.demo.managers.BackgroundManager;
+import com.example.demo.managers.CollisionManager;
+import com.example.demo.managers.GameStateManager;
+import com.example.demo.managers.GameTimelineManager;
 import com.example.demo.utils.GameState;
-
-import javafx.animation.*;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.image.*;
-import javafx.scene.input.*;
-import javafx.util.Duration;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
-public abstract class LevelParent extends Observable {
+public abstract class LevelParent {
 
-	private static final double SCREEN_HEIGHT_ADJUSTMENT = 150;
-	private static final int MILLISECOND_DELAY = 50;
-	private final double screenHeight;
-	private final double screenWidth;
-	private final double enemyMaximumYPosition;
+    private static final double SCREEN_HEIGHT_ADJUSTMENT = 150;
+    private final double screenHeight;
+    private final double screenWidth;
+    private final double enemyMaximumYPosition;
 
-	private final Group root;
-	private final Timeline timeline;
-	private final UserPlane user;
-	private final Scene scene;
-	private final ImageView background;
+    private final Group root;
+    private final Scene scene;
+    private final UserPlane user;
+    private final GameTimelineManager gameTimeline;
+    private final BackgroundManager backgroundManager;
+    private final ActorManager actorManager;
+    private final CollisionManager collisionManager;
+    private final GameStateManager gameStateManager;
+    private final LevelView levelView;
 
-	private final List<ActiveActorDestructible> friendlyUnits;
-	private final List<ActiveActorDestructible> enemyUnits;
-	private final List<ActiveActorDestructible> userProjectiles;
-	private final List<ActiveActorDestructible> enemyProjectiles;
+    public LevelParent(String backgroundImageName, double screenHeight, double screenWidth, int playerInitialHealth) {
+        this.root = new Group();
+        this.scene = new Scene(root, screenWidth, screenHeight);
+        this.user = new UserPlane(playerInitialHealth);
+        this.screenHeight = screenHeight;
+        this.screenWidth = screenWidth;
+        this.enemyMaximumYPosition = screenHeight - SCREEN_HEIGHT_ADJUSTMENT;
+        this.levelView = instantiateLevelView();
+        this.actorManager = new ActorManager(root, screenWidth, screenHeight, user);
+        this.collisionManager = new CollisionManager(actorManager, user);
+        this.gameStateManager = new GameStateManager(GameState.LEVEL_ONE);
+        this.backgroundManager = new BackgroundManager(backgroundImageName, screenHeight, screenWidth, root);
+        this.gameTimeline = new GameTimelineManager(this::updateScene);
+        initializeKeyHandlers();
+    }
 
-	private GameState currentState;
+    protected abstract void initializeFriendlyUnits();
 
-	private int currentNumberOfEnemies;
-	private LevelView levelView;
+    protected abstract void checkIfGameOver();
 
-	public LevelParent(String backgroundImageName, double screenHeight, double screenWidth, int playerInitialHealth) {
-		this.root = new Group();
-		this.scene = new Scene(root, screenWidth, screenHeight);
-		this.timeline = new Timeline();
-		this.user = new UserPlane(playerInitialHealth);
-		this.friendlyUnits = new ArrayList<>();
-		this.enemyUnits = new ArrayList<>();
-		this.userProjectiles = new ArrayList<>();
-		this.enemyProjectiles = new ArrayList<>();
+    protected abstract void spawnEnemyUnits();
 
-		this.background = new ImageView(new Image(getClass().getResource(backgroundImageName).toExternalForm()));
-		this.screenHeight = screenHeight;
-		this.screenWidth = screenWidth;
-		this.enemyMaximumYPosition = screenHeight - SCREEN_HEIGHT_ADJUSTMENT;
-		this.levelView = instantiateLevelView();
-		this.currentNumberOfEnemies = 0;
-		initializeTimeline();
-		friendlyUnits.add(user);
-		this.currentState = GameState.LEVEL_ONE;
-	}
+    protected abstract LevelView instantiateLevelView();
 
-	protected abstract void initializeFriendlyUnits();
+    public Scene initializeScene() {
+        initializeFriendlyUnits();
+        levelView.showHeartDisplay();
+        return scene;
+    }
 
-	protected abstract void checkIfGameOver();
+    public void startGame() {
+        backgroundManager.requestFocus();
+        gameTimeline.start();
+    }
 
-	protected abstract void spawnEnemyUnits();
+    public void stopGame() {
+        gameTimeline.stop();
+    }
 
-	protected abstract LevelView instantiateLevelView();
+    private void updateScene() {
+        try {
+            spawnEnemyUnits();
+            actorManager.updateActors();
+            collisionManager.handleCollisions();
+            actorManager.removeAllDestroyedActors();
+            updateLevelView();
+            checkIfGameOver();
+            updateActors();
+        } catch (Exception e) {
+            e.printStackTrace();
+            stopGame();
+            showErrorAlert(e);
+        }
+    }
 
-	public Scene initializeScene() {
-		initializeBackground();
-		initializeFriendlyUnits();
-		levelView.showHeartDisplay();
-		return scene;
-	}
+    protected void updateActors() {
+        // To be implemented by subclasses
+    }
 
-	public void startGame() {
-		background.requestFocus();
-		timeline.play();
-	}
+    private void updateLevelView() {
+        levelView.removeHearts(user.getHealth());
+    }
 
-	public void goToNextLevel(GameState nextState) {
-		if (currentState == nextState) {
-			return;
-		}
-		System.out.println("Going to next level: " + nextState);
-		setChanged();
-		notifyObservers(nextState);
-		currentState = nextState;
-	}
+    protected void winGame() {
+        gameTimeline.stop();
+        levelView.showWinImage();
+    }
 
-	public void stopGame() {
-		timeline.stop();
-	}
+    protected void loseGame() {
+        gameTimeline.stop();
+        levelView.showGameOverImage();
+    }
 
-	private void updateScene() {
-		try {
-			spawnEnemyUnits();
-			updateActors();
-			generateEnemyFire();
-			updateNumberOfEnemies();
-			handleEnemyPenetration();
-			handleUserProjectileCollisions();
-			handleEnemyProjectileCollisions();
-			handlePlaneCollisions();
-			removeAllDestroyedActors();
-			updateLevelView();
-			checkIfGameOver();
-		} catch (Exception e) {
-			System.out.println("Error in updateScene method");
-			System.out.println(e.getClass().toString() + ": " + e.getMessage());
-			e.printStackTrace();
-			stopGame();
-			showErrorAlert(e);
-		}
-	}
+    protected UserPlane getUser() {
+        return user;
+    }
 
-	private void showErrorAlert(Exception e) {
-		Alert alert = new Alert(Alert.AlertType.ERROR);
-		alert.setContentText(e.getClass().toString() + ": " + e.getMessage());
-		alert.show();
-	}
+    protected Group getRoot() {
+        return root;
+    }
 
-	private void initializeTimeline() {
-		timeline.setCycleCount(Timeline.INDEFINITE);
-		KeyFrame gameLoop = new KeyFrame(Duration.millis(MILLISECOND_DELAY), e -> updateScene());
-		timeline.getKeyFrames().add(gameLoop);
-	}
+    protected double getEnemyMaximumYPosition() {
+        return enemyMaximumYPosition;
+    }
 
-	private void initializeBackground() {
-		background.setFocusTraversable(true);
-		background.setFitHeight(screenHeight);
-		background.setFitWidth(screenWidth);
-		background.setOnKeyPressed(new EventHandler<KeyEvent>() {
-			public void handle(KeyEvent e) {
-				KeyCode kc = e.getCode();
-				if (kc == KeyCode.UP || kc == KeyCode.W)
-					user.moveUp();
-				if (kc == KeyCode.DOWN || kc == KeyCode.S)
-					user.moveDown();
-				if (kc == KeyCode.LEFT || kc == KeyCode.A)
-					user.moveLeft();
-				if (kc == KeyCode.RIGHT || kc == KeyCode.D)
-					user.moveRight();
-				if (kc == KeyCode.SPACE)
-					fireProjectile();
-			}
-		});
-		background.setOnKeyReleased(new EventHandler<KeyEvent>() {
-			public void handle(KeyEvent e) {
-				KeyCode kc = e.getCode();
-				if (kc == KeyCode.UP || kc == KeyCode.DOWN || kc == KeyCode.W || kc == KeyCode.S)
-					user.stopVertical();
-				else if (kc == KeyCode.LEFT || kc == KeyCode.RIGHT || kc == KeyCode.A || kc == KeyCode.D)
-					user.stopHorizontal();
-			}
-		});
-		root.getChildren().add(background);
-	}
+    protected double getScreenWidth() {
+        return screenWidth;
+    }
 
-	private static final int MAX_PROJECTILES = 10;
+    protected boolean userIsDestroyed() {
+        return user.isDestroyed();
+    }
 
-	private void fireProjectile() {
-		if (userProjectiles.size() < MAX_PROJECTILES) {
+    protected void addEnemyUnit(ActiveActorDestructible enemy) {
+        actorManager.addEnemyUnit(enemy);
+    }
 
-			ActiveActorDestructible projectile = user.fireProjectile();
-			root.getChildren().add(projectile);
-			userProjectiles.add(projectile);
-		}
-	}
+    protected int getCurrentNumberOfEnemies() {
+        return actorManager.getEnemyUnits().size();
+    }
 
-	private void generateEnemyFire() {
-		enemyUnits.forEach(enemy -> spawnEnemyProjectile(((FighterPlane) enemy).fireProjectile()));
-	}
+    protected void goToNextLevel(GameState gameState) {
+        gameStateManager.goToNextLevel(gameState);
+    }
 
-	private void spawnEnemyProjectile(ActiveActorDestructible projectile) {
-		if (projectile != null) {
-			root.getChildren().add(projectile);
-			enemyProjectiles.add(projectile);
-		}
-	}
+    private void showErrorAlert(Exception e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText(e.getClass().toString() + ": " + e.getMessage());
+        alert.show();
+    }
 
-	public void updateActors() {
-		friendlyUnits.forEach(plane -> plane.updateActor());
-		enemyUnits.forEach(enemy -> enemy.updateActor());
-		userProjectiles.forEach(projectile -> projectile.updateActor());
-		enemyProjectiles.forEach(projectile -> projectile.updateActor());
-	}
+    public void addObserver(Observer observer) {
+        gameStateManager.addObserver(observer);
+    }
 
-	private void removeAllDestroyedActors() {
-		removeDestroyedActors(friendlyUnits);
-		removeDestroyedActors(enemyUnits);
-		removeDestroyedBullets(userProjectiles);
-		removeDestroyedActors(enemyProjectiles);
-	}
+    private void initializeKeyHandlers() {
+        scene.setOnKeyPressed(e -> handleKeyPressed(e));
+        scene.setOnKeyReleased(e -> handleKeyReleased(e));
+    }
 
-	private void removeDestroyedActors(List<ActiveActorDestructible> actors) {
-		List<ActiveActorDestructible> destroyedActors = actors.stream().filter(actor -> actor.isDestroyed())
-				.collect(Collectors.toList());
-		root.getChildren().removeAll(destroyedActors);
-		actors.removeAll(destroyedActors);
-	}
+    private void handleKeyPressed(KeyEvent e) {
+        KeyCode kc = e.getCode();
+        if (kc == KeyCode.UP || kc == KeyCode.W)
+            user.moveUp();
+        if (kc == KeyCode.DOWN || kc == KeyCode.S)
+            user.moveDown();
+        if (kc == KeyCode.LEFT || kc == KeyCode.A)
+            user.moveLeft();
+        if (kc == KeyCode.RIGHT || kc == KeyCode.D)
+            user.moveRight();
+        if (kc == KeyCode.SPACE) {
+            ActiveActorDestructible projectile = user.fireProjectile();
+            actorManager.addUserProjectile(projectile);
+        }
+    }
 
-	private void removeDestroyedBullets(List<ActiveActorDestructible> actors) {
-		List<ActiveActorDestructible> destroyedActors = actors.stream()
-				.filter(actor -> actor.isDestroyed() || isOutOfBounds(actor))
-				.collect(Collectors.toList());
-		root.getChildren().removeAll(destroyedActors);
-		actors.removeAll(destroyedActors);
-	}
-
-	private boolean isOutOfBounds(ActiveActorDestructible actor) {
-		double x = actor.getTranslateX();
-		double y = actor.getTranslateY();
-		return x < 0 || x > screenWidth || y < 0 || y > screenHeight;
-	}
-
-	private void handlePlaneCollisions() {
-		handleCollisions(friendlyUnits, enemyUnits);
-	}
-
-	private void handleUserProjectileCollisions() {
-		for (ActiveActorDestructible projectile : userProjectiles) {
-			for (ActiveActorDestructible enemy : enemyUnits) {
-				if (projectile.getBoundsInParent().intersects(enemy.getBoundsInParent())) {
-					enemy.takeDamage();
-					projectile.takeDamage();
-					if (enemy.isDestroyed()) {
-						System.out.println("Enemy destroyed");
-						user.incrementKillCount();
-					}
-				}
-			}
-		}
-	}
-
-	private void handleEnemyProjectileCollisions() {
-		handleCollisions(enemyProjectiles, friendlyUnits);
-	}
-
-	private void handleCollisions(List<ActiveActorDestructible> actors1,
-			List<ActiveActorDestructible> actors2) {
-		for (ActiveActorDestructible actor : actors2) {
-			for (ActiveActorDestructible otherActor : actors1) {
-				if (actor.getBoundsInParent().intersects(otherActor.getBoundsInParent())) {
-					actor.takeDamage();
-					otherActor.takeDamage();
-				}
-			}
-		}
-	}
-
-	private void handleEnemyPenetration() {
-		for (ActiveActorDestructible enemy : enemyUnits) {
-			if (enemyHasPenetratedDefenses(enemy)) {
-				user.takeDamage();
-				enemy.destroy();
-			}
-		}
-	}
-
-	private void updateLevelView() {
-		levelView.removeHearts(user.getHealth());
-	}
-
-	private boolean enemyHasPenetratedDefenses(ActiveActorDestructible enemy) {
-		return Math.abs(enemy.getTranslateX()) > screenWidth;
-	}
-
-	protected void winGame() {
-		timeline.stop();
-		levelView.showWinImage();
-	}
-
-	protected void loseGame() {
-		timeline.stop();
-		levelView.showGameOverImage();
-	}
-
-	protected UserPlane getUser() {
-		return user;
-	}
-
-	protected Group getRoot() {
-		return root;
-	}
-
-	protected int getCurrentNumberOfEnemies() {
-		return enemyUnits.size();
-	}
-
-	protected void addEnemyUnit(ActiveActorDestructible enemy) {
-		enemyUnits.add(enemy);
-		root.getChildren().add(enemy);
-	}
-
-	protected double getEnemyMaximumYPosition() {
-		return enemyMaximumYPosition;
-	}
-
-	protected double getScreenWidth() {
-		return screenWidth;
-	}
-
-	protected boolean userIsDestroyed() {
-		return user.isDestroyed();
-	}
-
-	private void updateNumberOfEnemies() {
-		currentNumberOfEnemies = enemyUnits.size();
-	}
-
+    private void handleKeyReleased(KeyEvent e) {
+        KeyCode kc = e.getCode();
+        if (kc == KeyCode.UP || kc == KeyCode.DOWN || kc == KeyCode.W || kc == KeyCode.S)
+            user.stopVertical();
+        else if (kc == KeyCode.LEFT || kc == KeyCode.RIGHT || kc == KeyCode.A || kc == KeyCode.D)
+            user.stopHorizontal();
+    }
 }

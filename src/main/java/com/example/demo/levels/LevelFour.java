@@ -46,5 +46,6 @@ public class LevelFour extends LevelParent {
     public void updateActors() {
         super.updateActors();
         levelView.updateBossHealth(boss.getHealth());
+
     }
 }
