@@ -143,7 +143,10 @@
 - **Implementation**: Created `LevelThree` and `LevelFour` classes extending `LevelParent`.
 
 ## Compilation Instructions
-1. **Clone the Repository**:
-   ```sh
-   git clone https://github.com/kooitt/CW2024.git
+### Prerequisites
+   Java, Maven, Javafx
+1. *Clone the Repository*:
+   git clone https://github.com/dvz42/CW2024
    cd CW2024
+2. *Run the Project*:
+   mvn javafx:run
